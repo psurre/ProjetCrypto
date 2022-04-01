@@ -4,18 +4,15 @@ import java.io.PrintWriter;
 import java.net.SocketException;
 
 /**
- * Copies bytes from an InputStream to an OutputStream.  Uses a
- * ProxyDataFilter to log the contents appropriately.
+ * Copie les octets d'un InputStream vers un OutputStream.  Utilise un
+ * ProxyDataFilter pour enregistrer le contenu de manière appropriée.
  *
  */
 public class CryptoStreamThread implements Runnable
 {
-    // For simplicity, the filters take a buffer oriented approach.
-    // This means that they all break at buffer boundaries. Our buffer
-    // is huge, so we shouldn't practically cause a problem, but the
-    // network clearly can by giving us message fragments.
-    // We really ought to take a stream oriented approach.
-    private final static int BUFFER_SIZE = 65536;
+    // Pour des raisons de simplicité, les filtres adoptent une approche orientée tampon.
+    // Cela signifie qu'ils s'arrêtent tous aux limites du tampon. Notre tampon
+    // est énorme, donc nous ne devrions pas poser de problème, mais le réseau peut le faire en nous envoyant des fragments de messages.
 
     private final CryptoConnDet m_connectionDetails;
     private final InputStream m_in;
@@ -36,7 +33,7 @@ public class CryptoStreamThread implements Runnable
 
         final Thread t =
                 new Thread(this,
-                        "Filter thread for " +
+                        TLSHackConstants.THREADFILTER +
                                 m_connectionDetails.getDescription());
 
         try {
@@ -50,10 +47,10 @@ public class CryptoStreamThread implements Runnable
 
     public void run() {
         try {
-            byte[] buffer = new byte[BUFFER_SIZE];
+            byte[] buffer = new byte[TLSHackConstants.BUFFERSIZE];
 
             while (true) {
-                final int bytesRead = m_in.read(buffer, 0, BUFFER_SIZE);
+                final int bytesRead = m_in.read(buffer, 0, TLSHackConstants.BUFFERSIZE);
 
                 if (bytesRead == -1) {
                     break;
@@ -72,7 +69,7 @@ public class CryptoStreamThread implements Runnable
                 }
             }
         } catch (SocketException e) {
-            // Be silent about SocketExceptions.
+            // On ne renvoie pas d'erreur sur les erreurs de Socket
         } catch (Exception e) {
             e.printStackTrace(System.err);
         }
@@ -85,9 +82,7 @@ public class CryptoStreamThread implements Runnable
 
         m_outputWriter.flush();
 
-        // We're exiting, usually because the in stream has been
-        // closed. Whatever, close our streams. This will cause the
-        // paired thread to exit to.
+        // Fin lorsque le stream d'entrée est clos.
         try {
             m_out.close();
         } catch (Exception e) {

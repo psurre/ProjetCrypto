@@ -14,10 +14,7 @@ import java.security.cert.X509Certificate;
 import java.util.Base64;
 
 /**
- * MITMSSLSocketFactory is used to create SSL sockets.
- *
- * This is needed because the javax.net.ssl socket factory classes don't
- * allow creation of factories with custom parameters.
+ * Création de sockets TLS.
  *
  */
 public final class CryptoTLSSocketManager implements CryptoSocketManager
@@ -49,14 +46,18 @@ public final class CryptoTLSSocketManager implements CryptoSocketManager
     public CryptoTLSSocketManager()
             throws IOException, GeneralSecurityException
     {
-        m_sslContext = SSLContext.getInstance("SSL");
+        m_sslContext = SSLContext.getInstance(TLSHackConstants.TLSSTANDARD);
 
+        // Un seul algorithm PKIX
         final KeyManagerFactory keyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
 
-        final String keyStoreFile = System.getProperty(TLSHackConstants.KEYSTORELIB, TLSHackConstants.KEYSTOREFILE);
-        final char[] keyStorePassword = System.getProperty(TLSHackConstants.KEYSTOREPASSLIB, Base64.getDecoder().decode(TLSHackConstants.KEYSTOREPASS).toString()).toCharArray();
-        final String keyStoreType = System.getProperty(TLSHackConstants.KEYSTORETYPELIB, TLSHackConstants.KEYSTORETYPE);
+        final String keyStoreFile = System.getProperty(TLSHackConstants.KEYSTORELIB, TLSHackConstants.ROOTCAFILE);
+        char[] keyStorePassword = System.getProperty(TLSHackConstants.KEYSTOREPASSLIB, TLSHackConstants.ROOTCAKSPASS).toCharArray();
+        final String keyStoreType = System.getProperty(TLSHackConstants.KEYSTORETYPELIB, TLSHackConstants.ROOTCAKSTYPE);
+        //KeyStore Decode
+        byte[] passTmp = java.util.Base64.getDecoder().decode(String.valueOf(keyStorePassword));
+        keyStorePassword = new String (passTmp).toCharArray();
 
         final KeyStore keyStore;
 
@@ -84,22 +85,25 @@ public final class CryptoTLSSocketManager implements CryptoSocketManager
      * that is initialized with a forged server certificate
      * that is issued by the proxy "CA certificate".
      */
-    public CryptoTLSSocketManager(String remoteCN, iaik.x509.X509Certificate remoteServerCert)
+    public CryptoTLSSocketManager(String remoteCN, X509Certificate remoteServerCert)
             throws Exception
     {
-        m_sslContext = SSLContext.getInstance("SSL");
+        m_sslContext = SSLContext.getInstance(TLSHackConstants.TLSSTANDARD);
 
         final KeyManagerFactory keyManagerFactory =
                 KeyManagerFactory.getInstance(
                         KeyManagerFactory.getDefaultAlgorithm());
 
         final String keyStoreFile =
-                System.getProperty(TLSHackConstants.KEYSTORELIB, TLSHackConstants.KEYSTOREFILE);
-        final char[] keyStorePassword =
-                System.getProperty(TLSHackConstants.KEYSTOREPASSLIB, Base64.getDecoder().decode(TLSHackConstants.KEYSTOREPASS).toString())
-                        .toCharArray();
+                System.getProperty(TLSHackConstants.KEYSTORELIB, TLSHackConstants.ROOTCAFILE);
+        char[] keyStorePassword =
+                System.getProperty(TLSHackConstants.KEYSTOREPASSLIB, TLSHackConstants.ROOTCAKSPASS).toCharArray();
+        //KeyStore Decode
+        byte[] passTmp = java.util.Base64.getDecoder().decode(String.valueOf(keyStorePassword));
+        keyStorePassword = new String (passTmp).toCharArray();
+
         final String keyStoreType =
-                System.getProperty(TLSHackConstants.KEYSTORETYPELIB, TLSHackConstants.KEYSTORETYPE);
+                System.getProperty(TLSHackConstants.KEYSTORETYPELIB, TLSHackConstants.ROOTCAKSTYPE);
 
         final KeyStore keyStore;
 
@@ -111,10 +115,10 @@ public final class CryptoTLSSocketManager implements CryptoSocketManager
         //Create new server certificate
         PrivateKey pk = (PrivateKey) keyStore.getKey(TLSHackConstants.DEFAULT_ALIAS,keyStorePassword);
 
-        iaik.x509.X509Certificate newCert = CryptoSignCert.forgeCert(keyStore, keyStorePassword,TLSHackConstants.DEFAULT_ALIAS,
+        X509Certificate newCert = CryptoSignCert.forgeCert(keyStore, keyStorePassword,TLSHackConstants.DEFAULT_ALIAS,
                 remoteCN, remoteServerCert);
 
-        KeyStore newKS = KeyStore.getInstance("jks");
+        KeyStore newKS = KeyStore.getInstance(keyStoreType);
         newKS.load(null, null);
 
         newKS.setKeyEntry(TLSHackConstants.DEFAULT_ALIAS, pk, keyStorePassword, new Certificate[] {newCert});

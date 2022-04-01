@@ -12,43 +12,42 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import iaik.asn1.ObjectID;
 import iaik.asn1.structures.Name;
-
+import org.bouncycastle.asn1.x500.RDN;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
+import org.bouncycastle.asn1.x500.X500Name;
 
 /**
- * HTTPS proxy implementation.
  *
- * A HTTPS proxy client first send a CONNECT message to the proxy
- * port. The proxy accepts the connection responds with a 200 OK,
- * which is the client's queue to send SSL data to the proxy. The
- * proxy just forwards it on to the server identified by the CONNECT
- * message.
+ * Un client proxy HTTPS envoie d'abord un message CONNECT au port du proxy.
+ * Le proxy accepte la connexion et répond avec un 200 OK,
+ * qui est la file d'attente du client pour envoyer des données TLS au proxy
+ * Le proxy se contente de les transmettre au serveur identifié par le message CONNECT
+ * du message CONNECT.
  *
- * The Java API presents a particular challenge: it allows sockets
- * to be either SSL or not SSL, but doesn't let them change their
- * stripes midstream. (In fact, if the JSSE support was stream
- * oriented rather than socket oriented, a lot of problems would go
- * away). To hack around this, we accept the CONNECT then blindly
- * proxy the rest of the stream through a special
- * ProxyEngine class (ProxySSLEngine) which is instantiated to
- * handle SSL.
+ * L'API Java présente un défi particulier : elle permet aux sockets
+ * d'être soit SSL soit non SSL, mais ne leur permet pas de changer leur
+ * type en cours de route.Pour contourner ce problème, nous acceptons le CONNECT puis aveuglément
+ * le reste du flux à travers une classe spéciale ProxyEngine (ProxySSLEngine) qui est instanciée pour
+ * TLS.
  *
- * @author Srinivas Inguva
+ * @author Team Crypto
  */
 public class CryptoHTTPSWork extends CryptoWork
 {
-
-    public static final String ACCEPT_TIMEOUT_MESSAGE = "Listen time out";
-
+    // Déclaration des variables communes à la classe
     private String m_tempRemoteHost;
     private int m_tempRemotePort;
-
     private final Pattern m_httpsConnectPattern;
-
     private final ProxyTLSEngine m_proxyTLSEngine;
-
-    //NOTE: might be handy to use a bounded size cache..
     private final HashMap<String, CryptoTLSSocketManager> cnMap = new HashMap<String, CryptoTLSSocketManager>();
 
+    /** Constructeur de la classe
+     * CryptoHTTPSocketManager => Classe pour créer un socket HTTP
+     * CryptoTLSSocketManager => Classe pour créer un socket TLS
+     * Crypofilter => Classe permettant de transférer les données d'une connexion TCP
+     *
+     */
     public CryptoHTTPSWork(CryptoHTTPSocketManager plainSocketFactory,
                             CryptoTLSSocketManager sslSocketFactory,
                             CryptoFilter requestFilter,
@@ -58,77 +57,75 @@ public class CryptoHTTPSWork extends CryptoWork
                             int timeout)
             throws IOException, PatternSyntaxException
     {
-        // We set this engine up for handling plain HTTP and delegate
-        // to a proxy for HTTPS.
+        // Nous configurons ce moteur pour gérer le HTTP simple et le déléguons
+        // à un proxy TLS pour HTTPS.
+        // Appel au constructeur de la classe mère : CryptoWork
         super(plainSocketFactory,
                 requestFilter,
                 responseFilter,
                 new CryptoConnDet(localHost, localPort, "", -1, false),
                 timeout);
-
+        // Pattern pour intercepter le message CONNECT
         m_httpsConnectPattern =
                 Pattern.compile("^CONNECT[ \\t]+([^:]+):(\\d+).*\r\n\r\n",
                         Pattern.DOTALL);
 
-        // When handling HTTPS proxies, we use our plain socket to
-        // accept connections on. We suck the bit we understand off
-        // the front and forward the rest through our proxy engine.
-        // The proxy engine listens for connection attempts (which
-        // come from us), then sets up a thread pair which pushes data
-        // back and forth until either the server closes the
-        // connection, or we do (in response to our client closing the
-        // connection). The engine handles multiple connections by
-        // spawning multiple thread pairs.
+        // Dans le cas du HTTPS, nous utilisons notre socket ordinaire pour
+        // accepter les connexions. Nous aspirons le peu que nous comprenons
+        // depuis la requête entrante et on transmet le reste à travers notre moteur de proxy.
+        // Le moteur de proxy écoute les tentatives de connexion (qui
+        // viennent de nous), puis met en place une paire de threads qui poussent les données
+        // dans les deux sens jusqu'à ce que le serveur ferme la connexion,
+        // ou que nous le fassions (en réponse à notre client qui ferme la
+        //  connexion). Le moteur gère les connexions multiples en
+        //  en créant plusieurs paires de threads.
 
         assert sslSocketFactory != null;
         m_proxyTLSEngine = new ProxyTLSEngine(sslSocketFactory, requestFilter, responseFilter);
 
     }
-
+    // Fonction de lancement du serveur proxy
     public void run()
     {
-        // Should be more than adequate.
         final byte[] buffer = new byte[40960];
 
         while (true) {
             try {
-                //Plaintext Socket with client (i.e. browser)
+                //Socket avec le message en clair
                 final Socket localSocket = getServerSocket().accept();
 
-                // Grab the first plaintext upstream buffer, which we're hoping is
-                // a CONNECT message.
+                // Doit être un message de type CONNECT
                 final BufferedInputStream in =
                         new BufferedInputStream(localSocket.getInputStream(),
                                 buffer.length);
 
                 in.mark(buffer.length);
 
-                // Read a buffer full.
+                // Lecture du flux dans la variable buffer
                 final int bytesRead = in.read(buffer);
 
                 final String line =
                         bytesRead > 0 ?
                                 new String(buffer, 0, bytesRead, TLSHackConstants.CRYPTOCHARSET) : "";
 
+                // Recherche du CONNECT
                 final Matcher httpsConnectMatcher =
                         m_httpsConnectPattern.matcher(line);
-
-                // 'grep' for CONNECT message and extract the remote server/port
-
-                if (httpsConnectMatcher.find()) {//then we have a proxy CONNECT message!
-                    // Discard any other plaintext data the client sends us:
+                if (httpsConnectMatcher.find()) {
+                    // On a bien un CONNECT
+                    // Suppression des autres messages en clair du client
                     while (in.read(buffer, 0, in.available()) > 0) {
                     }
-
+                    // Champ 1 => Le serveur distant
                     final String remoteHost = httpsConnectMatcher.group(1);
-
-                    // Must be a port number by specification.
+                    // Champ 2 => Le port
                     final int remotePort = Integer.parseInt(httpsConnectMatcher.group(2));
 
+                    // Serveur distant et port
                     final String target = remoteHost + ":" + remotePort;
 
                     if (CryptoProxyServer.debugFlag)
-                        System.out.println("[HTTPSProxyEngine] Establishing a new HTTPS proxy connection to " + target);
+                        System.out.println(TLSHackConstants.NEWPROXCONN + target);
 
                     m_tempRemoteHost = remoteHost;
                     m_tempRemotePort = remotePort;
@@ -136,26 +133,25 @@ public class CryptoHTTPSWork extends CryptoWork
                     X509Certificate java_cert = null;
                     SSLSocket remoteSocket = null;
                     try {
-                        //Lookup the "common name" field of the certificate from the remote server:
+                        // Création d'un socket pour récupérer le certificat du serveur distant
                         remoteSocket = (SSLSocket)
                                 m_proxyTLSEngine.getSocketFactory().createClientSocket(remoteHost, remotePort);
+                        //Récupération du "common name" du certificat :
                         java_cert = (X509Certificate) remoteSocket.getSession().getPeerCertificates()[0];
                     } catch (IOException ioe) {
                         ioe.printStackTrace();
-                        // Try to be nice and send a reasonable error message to client
-                        sendClientResponse(localSocket.getOutputStream(),"504 Gateway Timeout",remoteHost,remotePort);
+                        sendClientResponse(localSocket.getOutputStream(),TLSHackConstants.TOCLIENTERR,remoteHost,remotePort);
+                        // On fait un tour de boucle suivant sans traiter la suite
                         continue;
                     }
-                    String serverCNJava = java_cert.getSubjectDN().getName();
-                    System.out.println("Server SubjectDN : "+serverCNJava);
-                    //Use the IAIK X509Cert class, because it has a simple way to get the CN
-                    iaik.x509.X509Certificate cert = new iaik.x509.X509Certificate(java_cert.getEncoded());
-                    Name n = (Name)cert.getSubjectDN();
-                    String serverCN = n.getRDN(ObjectID.commonName);
-
+                    // Récupération du SubjectCN avec bouncycastle
+                    X500Name x500name = new JcaX509CertificateHolder(java_cert).getSubject();
+                    RDN cn = x500name.getRDNs(BCStyle.CN)[0];
+                    String cName = cn.getFirst().getValue().toString();
+                    System.out.println("Server SubjectDN : "+cName);
 
                     if (CryptoProxyServer.debugFlag)
-                        System.out.println("[HTTPSProxyEngine] Remote Server Cert CN= "+serverCN);
+                        System.out.println(TLSHackConstants.REMOTESRVCN+cName);
 
                     //We've already opened the socket, so might as well keep using it:
                     m_proxyTLSEngine.setRemoteSocket(remoteSocket);
@@ -163,7 +159,7 @@ public class CryptoHTTPSWork extends CryptoWork
                     //This is a CRUCIAL step:  we dynamically generate a new cert, based
                     // on the remote server's CN, and return a reference to the internal
                     // server socket that will make use of it.
-                    ServerSocket localProxy = m_proxyTLSEngine.createServerSocket(serverCN,cert);
+                    ServerSocket localProxy = m_proxyTLSEngine.createServerSocket(cName,java_cert);
 
                     //Kick off a new thread to send/recv data to/from the remote server.
                     // Remote server's response data is made available via an internal
@@ -197,14 +193,14 @@ public class CryptoHTTPSWork extends CryptoWork
                 }
                 else { //Not a CONNECT request.. nothing we can do.
                     System.err.println(
-                            "Failed to determine proxy destination from message:");
+                            TLSHackConstants.PROXFAILEDTO);
                     System.err.println(line);
-                    sendClientResponse(localSocket.getOutputStream(),"501 Not Implemented","localhost",
+                    sendClientResponse(localSocket.getOutputStream(),TLSHackConstants.MSG501,TLSHackConstants.LOCALHOST,
                             getConnectionDetails().getLocalPort());
                 }
             }
             catch (InterruptedIOException e) {
-                System.err.println(ACCEPT_TIMEOUT_MESSAGE);
+                System.err.println(TLSHackConstants.ACCEPTTIMEOUTMSG);
                 break;
             }
             catch (Exception e) {
@@ -225,17 +221,17 @@ public class CryptoHTTPSWork extends CryptoWork
     }
 
     /*
-     * Used to funnel data between a client (e.g. a web browser) and a
-     * remote SSLServer, that the client is making a request to.
+     * Utilisé pour canaliser les données entre un client (par exemple un navigateur web) et un
+     * serveur TLS distant, auquel le client adresse une requête.
      *
      */
     private class ProxyTLSEngine extends CryptoWork {
         Socket remoteSocket = null;
         int timeout = 0;
         /*
-         * NOTE: that port number 0, used below indicates a system-allocated,
-         * dynamic port number.
+         * Port number = 0 => system-allocated dynamic port number.
          */
+        // Constructeur de la classe
         ProxyTLSEngine(CryptoTLSSocketManager socketFactory,
                        CryptoFilter requestFilter,
                        CryptoFilter responseFilter)
@@ -252,7 +248,7 @@ public class CryptoHTTPSWork extends CryptoWork
             this.remoteSocket = s;
         }
 
-        public final ServerSocket createServerSocket(String remoteServerCN, iaik.x509.X509Certificate remoteServerCert)
+        public final ServerSocket createServerSocket(String remoteServerCN, X509Certificate remoteServerCert)
                 throws Exception
         {
 
@@ -261,14 +257,13 @@ public class CryptoHTTPSWork extends CryptoWork
             CryptoTLSSocketManager ssf = null;
 
             if (cnMap.get(remoteServerCN) == null) {
-                //Instantiate a NEW SSLSocketFactory with a cert that's based on the remote
-                // server's Common Name
-                System.out.println("[HTTPSProxyEngine] Creating a new certificate for "+remoteServerCN);
+                //Instanciation d'un socketTLS avec un certificat basé sur le nom commun du serveur distant.
+                System.out.println(TLSHackConstants.HTTPSCERTCREATE+remoteServerCN);
                 ssf = new CryptoTLSSocketManager(remoteServerCN, remoteServerCert);
                 cnMap.put(remoteServerCN, ssf);
             } else {
                 if (CryptoProxyServer.debugFlag)
-                    System.out.println("[HTTPSProxyEngine] Found cached certificate for "+remoteServerCN);
+                    System.out.println(TLSHackConstants.HTTPSCERTFOUND+remoteServerCN);
                 ssf = (CryptoTLSSocketManager) cnMap.get(remoteServerCN);
             }
             m_serverSocket = ssf.createServerSocket(getConnectionDetails().getLocalHost(), 0, timeout);
@@ -277,10 +272,7 @@ public class CryptoHTTPSWork extends CryptoWork
 
 
         /*
-         * localSocket.get[In|Out]putStream() is data that's (indirectly)
-         * being read from / written to the client.
-         *
-         * m_tempRemoteHost is the remote SSL Server.
+         * m_tempRemoteHost est le serveur TLS distant.
          */
         public void run()
         {
@@ -288,7 +280,7 @@ public class CryptoHTTPSWork extends CryptoWork
                 final Socket localSocket = this.getServerSocket().accept();
 
                 if (CryptoProxyServer.debugFlag)
-                    System.out.println("[HTTPSProxyEngine] New proxy proxy connection to " +
+                    System.out.println(TLSHackConstants.NEWPROXCONN +
                             m_tempRemoteHost + ":" + m_tempRemotePort);
 
                 this.launchThreadPair(localSocket, remoteSocket,

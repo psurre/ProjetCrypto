@@ -7,7 +7,7 @@ import java.io.PrintWriter;
  *       it can easily be changed to perform more complex behavior such as modifying
  *       HTTP requests/responses.
  *
- * @author Srinivas Inguva
+ * @author Team Crypto
 
  */
 public class CryptoFilter {

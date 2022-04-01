@@ -4,19 +4,20 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-
+/* Classe mère du moteur proxy HTTPS
+ * @author Team Crypto
+ */
 public abstract class CryptoWork implements Runnable {
 
-    public static final String ACCEPT_TIMEOUT_MESSAGE = "Listen time out";
+    // Déclaration des variables locales
     private final CryptoFilter m_requestFilter;
     private final CryptoFilter m_responseFilter;
     private final CryptoConnDet m_connectionDetails;
-
     private final PrintWriter m_outputWriter;
-
     public final CryptoSocketManager m_socketFactory;
     protected ServerSocket m_serverSocket;
 
+    // Constructeur de la classe
     public CryptoWork(CryptoSocketManager socketFactory,
                        CryptoFilter requestFilter,
                        CryptoFilter responseFilter,
@@ -38,8 +39,6 @@ public abstract class CryptoWork implements Runnable {
                         timeout);
     }
 
-    //run() method from Runnable is implemented in subclasses
-
     public final ServerSocket getServerSocket() {
         return m_serverSocket;
     }
@@ -54,9 +53,9 @@ public abstract class CryptoWork implements Runnable {
 
 
     /*
-     * Launch a pair of threads that:
-     * (1) Copy data sent from the client to the remote server
-     * (2) Copy data sent from the remote server to the client
+     * Démarre une paire de threads qui :
+     * (1) Copient les données envoyées du client au serveur distant
+     * (2) Copier les données envoyées du serveur distant vers le client.
      *
      */
     protected final void launchThreadPair(Socket localSocket, Socket remoteSocket,

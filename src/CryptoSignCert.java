@@ -1,5 +1,6 @@
-import iaik.asn1.structures.AlgorithmID;
-import iaik.x509.X509Certificate;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
@@ -8,6 +9,7 @@ import java.io.IOException;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 
 /**
  * Utility methods for creating a new signed certificate.
@@ -47,35 +49,37 @@ public class CryptoSignCert {
      */
 
     public static X509Certificate forgeCert(KeyStore caKS, char[] caKSPass, String caAlias,
-                                            String commonName, iaik.x509.X509Certificate baseCert)
+                                            String commonName, X509Certificate baseCert)
             throws Exception
     {
-        java.security.Security.addProvider(new iaik.security.provider.IAIK());
+        //java.security.Security.addProvider(new iaik.security.provider.IAIK());
+        java.security.Security.addProvider(new BouncyCastleProvider());
 
-        CertificateFactory cf = CertificateFactory.getInstance("X.509","IAIK");
+        //CertificateFactory cf = CertificateFactory.getInstance("X.509","BC");
 
         PrivateKey pk = (PrivateKey) caKS.getKey(caAlias,caKSPass);
         if (pk == null) {
-            System.out.println("no private key!");
+            System.out.println(TLSHackConstants.PKERROR);
         } else {
             if (CryptoProxyServer.debugFlag)
-                System.out.println("pk format="+pk.getFormat());
+                System.out.println(TLSHackConstants.PKFORMAT+pk.getFormat());
         }
+        X509Certificate rootCert = (X509Certificate) caKS.getCertificate(caAlias);
+        /*
         Certificate tmp = caKS.getCertificate(caAlias);
-        //Use IAIK's cert-factory, so we can easily use the X509CertificateGenerator!
         X509Certificate caCert = (X509Certificate)cf.generateCertificate(new ByteArrayInputStream(tmp.getEncoded()));
 
         Principal issuer = caCert.getSubjectDN();
-
-        AlgorithmID alg = AlgorithmID.sha256WithRSAEncryption;
-
+        // Type d'algorithme utilisé
+        AlgorithmIdentifier alg = new AlgorithmIdentifier(PKCSObjectIdentifiers.id_RSAES_OAEP);
+        //AlgorithmID alg = AlgorithmID.sha256WithRSAEncryption;
         PublicKey subjectPubKey = caCert.getPublicKey();
 
-        X509Certificate x509 = CryptoX509.generateCertificate(subjectPubKey,issuer,pk,alg,baseCert);
-
+        X509Certificate x509 = CryptoX509.generateCertificate(subjectPubKey,issuer,pk,alg,baseCert);*/
+        X509Certificate x509 = CryptoX509.generateBCCertificate(commonName, rootCert);
         if (CryptoProxyServer.debugFlag) {
-            System.out.println("Newly forged cert: ");
-            System.out.println(x509.toString(true));
+            System.out.println(TLSHackConstants.NEWCERT);
+            System.out.println(x509.toString());
         }
 
         return x509;

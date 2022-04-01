@@ -1,11 +1,11 @@
+import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
-import java.util.Base64;
 
 /**
  * Classe principale du projet Crypto.
  *
- * @author Patrick Surre
+ * @author Team Crypto
  */
 
 public class CryptoProxyServer
@@ -13,7 +13,9 @@ public class CryptoProxyServer
     public static boolean debugFlag = false;
 
     public static void main(String[] args) {
+        // Construction de l'objet proxy
         final CryptoProxyServer proxy = new CryptoProxyServer(args);
+        // Démarrage effectif du proxy
         proxy.run();
     }
 
@@ -21,16 +23,16 @@ public class CryptoProxyServer
         System.err.println(
                 "\n" +
                         "Usage: " +
-                        "\n java mitm.MITMProxyServer <options>" +
+                        "\n java CryptoProxyServer <options>" +
                         "\n" +
                         "\n Where options can include:" +
                         "\n" +
-                        "\n   [-localHost <host name/ip>]  Default is localhost" +
-                        "\n   [-localPort <port>]          Default is 8001" +
+                        "\n   [-localHost <host name/ip>]  Default is "+TLSHackConstants.LOCALHOST +
+                        "\n   [-localPort <port>]          Default is "+ TLSHackConstants.LOCALPORT +
                         "\n   [-keyStore <file>]           Key store details for" +
                         "\n   [-keyStorePassword <pass>]   certificates. Equivalent to" +
                         "\n   [-keyStoreType <type>]       javax.net.ssl.XXX properties" +
-                        "\n   [-keyStoreAlias <alias>]     Default is keytool default of 'mykey'" +
+                        "\n   [-keyStoreAlias <alias>]     Default is "+ TLSHackConstants.DEFAULT_ALIAS +
                         "\n   [-outputFile <filename>]     Default is stdout" +
                         "\n   [-v ]                        Verbose proxy output" +
                         "\n   [-h ]                        Print this message" +
@@ -53,15 +55,15 @@ public class CryptoProxyServer
 
     private CryptoProxyServer (String[] args)
     {
-        // Default values.
+        // Initialisation des variables
         CryptoFilter requestFilter = new CryptoFilter();
         CryptoFilter responseFilter = new CryptoFilter();
-        int localPort = 8001;
-        String localHost = "localhost";
+        int localPort = TLSHackConstants.LOCALPORT;
+        String localHost = TLSHackConstants.LOCALHOST;
 
         int timeout = 0;
         String filename = null;
-
+        // Initialisation des variables en fonction des arguments passés au programme
         try {
             for (int i=0; i<args.length; i++)
             {
@@ -97,21 +99,34 @@ public class CryptoProxyServer
         catch (Exception e) {
             throw printUsage();
         }
-
+        // Contrôle sur la valeur de timeout
         if (timeout < 0) {
             throw printUsage("Timeout must be non-negative");
         }
-
+        // Affichage du message de démarrage du proxy
         final StringBuffer startMessage = new StringBuffer();
 
-        startMessage.append("Initializing SSL proxy with the parameters:" +
+        startMessage.append(TLSHackConstants.PROXYSTART +
                 "\n   Local host:       " + localHost +
                 "\n   Local port:       " + localPort);
-        startMessage.append("\n   (TLS setup could take a few seconds)");
+        startMessage.append("\n   "+TLSHackConstants.TLSSETUP);
 
         System.err.println(startMessage);
-
+        // Création de la rootCA
+        File f = new File(TLSHackConstants.ROOTCAFILE);
+        if(!f.isFile())
+        {
+            // Le fichier n'existe pas, on le crée
+            try{
+                CryptoX509.generateRootCA();
+            } catch (Exception e){
+                System.err.println(TLSHackConstants.ROOTCAERR);
+                e.printStackTrace();
+                System.exit(2);
+            }
+        }
         try {
+            // Appel à la classe CryptoHTTPSWork pour créer le proxy
             m_engine =
                     new CryptoHTTPSWork(new CryptoHTTPSocketManager(),
                             new CryptoTLSSocketManager(),
@@ -121,10 +136,10 @@ public class CryptoProxyServer
                             localPort,
                             timeout);
 
-            System.err.println("Proxy initialized, listening on port " + localPort);
+            System.err.println(TLSHackConstants.PROXYLOAD + localPort);
         }
         catch (Exception e){
-            System.err.println("Could not initialize proxy:");
+            System.err.println(TLSHackConstants.PROXYLOADERR);
             e.printStackTrace();
             System.exit(2);
         }
