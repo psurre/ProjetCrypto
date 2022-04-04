@@ -112,20 +112,16 @@ public final class CryptoTLSSocketManager implements CryptoSocketManager
         keyStore = KeyStore.getInstance(keyStoreType);
         keyStore.load(new FileInputStream(keyStoreFile), keyStorePassword);
 
-        //Create new server certificate
+        //Récupération de la clé privée stockée dans le certificat de la rootCA
         PrivateKey pk = (PrivateKey) keyStore.getKey(TLSHackConstants.DEFAULT_ALIAS,keyStorePassword);
-
+        // Appel à la fonction pour forger les certificats
         X509Certificate newCert = CryptoSignCert.forgeCert(keyStore, keyStorePassword,TLSHackConstants.DEFAULT_ALIAS,
                 remoteCN, remoteServerCert);
 
         KeyStore newKS = KeyStore.getInstance(keyStoreType);
         newKS.load(null, null);
-
         newKS.setKeyEntry(TLSHackConstants.DEFAULT_ALIAS, pk, keyStorePassword, new Certificate[] {newCert});
-        //
-
         keyManagerFactory.init(newKS, keyStorePassword);
-
         m_sslContext.init(keyManagerFactory.getKeyManagers(),
                 new TrustManager[] { new TrustEveryone() },
                 null);

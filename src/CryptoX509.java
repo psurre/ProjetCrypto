@@ -24,6 +24,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.math.BigInteger;
 import java.security.*;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -128,7 +129,8 @@ public class CryptoX509 {
             issuedCertBuilder.addExtension(Extension.subjectKeyIdentifier, false, issuedCertExtUtils.createSubjectKeyIdentifier(csr.getSubjectPublicKeyInfo()));
 
             // Add intended key usage extension if needed
-            issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.keyEncipherment));
+            //issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.keyEncipherment));
+            issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment));
 
             // Add DNS name is cert is to used for SSL
             issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
@@ -141,8 +143,10 @@ public class CryptoX509 {
             // Verify the issued cert signature against the root (issuer) cert
             cert.verify(rootCert.getPublicKey(), TLSHackConstants.BC_PROVIDER);
 
+            // Ecriture du nouveau certificat dans un fichier .cer
             writeCertToFileBase64Encoded(cert, commonName+".cer");
-            exportKeyPairToKeystoreFile(issuedCertKeyPair, cert, commonName, commonName+".pfx", "PKCS12", TLSHackConstants.ROOTCAKSPASS);
+            // Export du nouveau certificat et de sa clef privée dans un keyStore qui lui est propre
+            exportKeyPairToKeystoreFile(issuedCertKeyPair, cert, TLSHackConstants.DEFAULT_ALIAS, commonName+".pfx", TLSHackConstants.ROOTCAKSTYPE, TLSHackConstants.ROOTCAKSPASS);
 
         } catch (NoSuchAlgorithmException e) {
             System.err.println(TLSHackConstants.KEYGENERR);
@@ -163,10 +167,11 @@ public class CryptoX509 {
     private static void exportKeyPairToKeystoreFile(KeyPair keyPair, X509Certificate certificate, String alias, String fileName, String storeType, String storePass) throws Exception {
         KeyStore sslKeyStore = KeyStore.getInstance(storeType, TLSHackConstants.BC_PROVIDER);
         sslKeyStore.load(null, null);
-        sslKeyStore.setKeyEntry(alias, keyPair.getPrivate(),null, new X509Certificate[]{certificate});
-        FileOutputStream keyStoreOs = new FileOutputStream(fileName);
+        // Récupération du mot de passe
         byte[] passTmp = java.util.Base64.getDecoder().decode(storePass);
         String pass = new String (passTmp);
+        sslKeyStore.setKeyEntry(alias, keyPair.getPrivate(), pass.toCharArray(),new X509Certificate[]{certificate});
+        FileOutputStream keyStoreOs = new FileOutputStream(fileName);
         sslKeyStore.store(keyStoreOs, pass.toCharArray());
     }
 
@@ -187,36 +192,4 @@ public class CryptoX509 {
         certificateOut.write("-----END CERTIFICATE-----".getBytes());
         certificateOut.close();
     }
-    /*
-    public static X509Certificate
-    generateCertificate(
-            PublicKey subjectPublicKey,
-            Principal issuerName,
-            PrivateKey issuerPrivateKey,
-            AlgorithmIdentifier algorithm,
-            X509Certificate baseCert
-    ) throws CertificateEncodingException {
-
-
-        try {
-            BigInteger issuedCertSerialNum = new BigInteger(Long.toString(new SecureRandom().nextLong()));
-
-            X509v3CertificateBuilder issuedCertBuilder = new X509v3CertificateBuilder(rootCertIssuer, issuedCertSerialNum, startDate, endDate, rootCertSubject, subjectPublicKey);
-
-            /*cert = new X509Certificate(baseCert.getEncoded());
-            cert.setPublicKey(subjectPublicKey);
-            cert.setIssuerDN(issuerName);
-            cert.sign(algorithm, issuerPrivateKey);
-        } catch (InvalidKeyException e) {
-            System.err.println("X509 Certificate Generation Error: Invalid Key");
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            System.err.println("X509 Certificate Generation Error: No Such Algorithm");
-            e.printStackTrace();
-        } catch (CertificateException e) {
-            System.err.println("X509 Certificate Generation Error: Certificate Exception");
-            e.printStackTrace();
-        }
-        return cert;
-    }*/
 }

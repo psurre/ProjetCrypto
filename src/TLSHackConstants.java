@@ -15,12 +15,12 @@ public interface TLSHackConstants {
     String BC_PROVIDER = "BC";
     String KEY_ALGORITHM = "RSA";
     int KEY_SIZE = 2048;
-    String SIGNATURE_ALGORITHM = "SHA256withRSA";
+    String SIGNATURE_ALGORITHM = "SHA256WithRSAEncryption";
     String TLSSTANDARD = "TLSv1.2";
-    String ROOTCACN = "CN=project-M1";
+    String ROOTCACN = "CN=localhost";
     String ROOTCAKSTYPE = "PKCS12";
-    String ROOTCAFILE = "project-M1.pfx";
-    String ROOTCACERT = "project-M1.cer";
+    String ROOTCAFILE = "localhost.pfx";
+    String ROOTCACERT = "localhost.cer";
     String ROOTCAKSPASS = "bW90MnBAc3NlSkFWQQ==";
     String ROOTCAERR = "[CryptoProxyServer] Erreur à la création de la Root CA !!";
 

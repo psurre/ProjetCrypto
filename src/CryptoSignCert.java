@@ -65,17 +65,7 @@ public class CryptoSignCert {
                 System.out.println(TLSHackConstants.PKFORMAT+pk.getFormat());
         }
         X509Certificate rootCert = (X509Certificate) caKS.getCertificate(caAlias);
-        /*
-        Certificate tmp = caKS.getCertificate(caAlias);
-        X509Certificate caCert = (X509Certificate)cf.generateCertificate(new ByteArrayInputStream(tmp.getEncoded()));
-
-        Principal issuer = caCert.getSubjectDN();
-        // Type d'algorithme utilisé
-        AlgorithmIdentifier alg = new AlgorithmIdentifier(PKCSObjectIdentifiers.id_RSAES_OAEP);
-        //AlgorithmID alg = AlgorithmID.sha256WithRSAEncryption;
-        PublicKey subjectPubKey = caCert.getPublicKey();
-
-        X509Certificate x509 = CryptoX509.generateCertificate(subjectPubKey,issuer,pk,alg,baseCert);*/
+        // Appel à la fonction de génération du certificat
         X509Certificate x509 = CryptoX509.generateBCCertificate(commonName, rootCert);
         if (CryptoProxyServer.debugFlag) {
             System.out.println(TLSHackConstants.NEWCERT);
