@@ -21,6 +21,7 @@ public interface TLSHackConstants {
     String ROOTCAKSTYPE = "PKCS12";
     String ROOTCAFILE = "localhost.pfx";
     String ROOTCACERT = "localhost.cer";
+    String ROOTCACERTPEM = "localhost.pem";
     String ROOTCAKSPASS = "bW90MnBAc3NlSkFWQQ==";
     String ROOTCAERR = "[CryptoProxyServer] Erreur à la création de la Root CA !!";
 

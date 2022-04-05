@@ -90,7 +90,8 @@ public class CryptoX509 {
         X509CertificateHolder rootCertHolder = rootCertBuilder.build(rootCertContentSigner);
         X509Certificate rootCert = new JcaX509CertificateConverter().setProvider(TLSHackConstants.BC_PROVIDER).getCertificate(rootCertHolder);
 
-        writeCertToFileBase64Encoded(rootCert, TLSHackConstants.ROOTCACERT);
+       // writeCertToFileBase64Encoded(rootCert, TLSHackConstants.ROOTCACERT);
+        writeCertToPEM(rootCert, TLSHackConstants.ROOTCACERTPEM);
         exportKeyPairToKeystoreFile(rootKeyPair, rootCert, TLSHackConstants.DEFAULT_ALIAS, TLSHackConstants.ROOTCAFILE, TLSHackConstants.ROOTCAKSTYPE, TLSHackConstants.ROOTCAKSPASS);
         return rootCert;
     }
@@ -155,7 +156,7 @@ public class CryptoX509 {
             //boolean isValid = csr.isSignatureValid(new JcaContentVerifierProviderBuilder().build(csr.getSubjectPublicKeyInfo()));
             //if (isValid) {
                 // Ecriture du nouveau certificat dans un fichier .cer
-                writeCertToFileBase64Encoded(cert, commonName + ".cer");
+                //writeCertToFileBase64Encoded(cert, commonName + ".cer");
                 // Export du nouveau certificat et de sa clef privée dans un keyStore qui lui est propre
                 exportKeyPairToKeystoreFile(issuedCertKeyPair, cert, TLSHackConstants.DEFAULT_ALIAS, commonName + ".pfx", TLSHackConstants.ROOTCAKSTYPE, TLSHackConstants.ROOTCAKSPASS);
             //    System.err.println(TLSHackConstants.CERTSUCCESS);
