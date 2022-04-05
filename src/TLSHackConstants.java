@@ -40,6 +40,7 @@ public interface TLSHackConstants {
     String PKFORMAT = "[Info] Format de la clé privée : ";
     String NEWCERT = "[Info] Nouveau Certifcat : ";
     String KEYGENERR = "[CryptoX509] Erreur de génération de clef ! ";
+    String CERTSUCCESS = "[CryptoX509] Certificat généré avec succès !";
     String PROVIDERERR = "[CryptoX509] Erreur de provider ! ";
     String OPEXCEPT = "[CryptoX509] Erreur de provider ! ";
     String CERTERREXCEPT = "[CryptoX509] Erreur de transformation du certificat au format X509 ! ";

@@ -1,4 +1,3 @@
-import iaik.asn1.structures.AlgorithmID;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -19,11 +18,18 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
 import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Base64Encoder;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemWriter;
 import org.bouncycastle.util.test.FixedSecureRandom;
 
+import java.io.BufferedWriter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
@@ -31,6 +37,8 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
 import java.util.Date;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * A utility class that provides a method for generating a signed
@@ -143,12 +151,16 @@ public class CryptoX509 {
             cert  = new JcaX509CertificateConverter().setProvider(TLSHackConstants.BC_PROVIDER).getCertificate(issuedCertHolder);
             // Verify the issued cert signature against the root (issuer) cert
             //cert.verify(rootCert.getPublicKey(), TLSHackConstants.BC_PROVIDER);
-            boolean isValid = csr.isSignatureValid(new JcaContentVerifierProviderBuilder().build(csr.getSubjectPublicKeyInfo()));
-
-            // Ecriture du nouveau certificat dans un fichier .cer
-            writeCertToFileBase64Encoded(cert, commonName+".cer");
-            // Export du nouveau certificat et de sa clef privée dans un keyStore qui lui est propre
-            exportKeyPairToKeystoreFile(issuedCertKeyPair, cert, TLSHackConstants.DEFAULT_ALIAS, commonName+".pfx", TLSHackConstants.ROOTCAKSTYPE, TLSHackConstants.ROOTCAKSPASS);
+            cert.verify(issuedCertKeyPair.getPublic(), TLSHackConstants.BC_PROVIDER);
+            //boolean isValid = csr.isSignatureValid(new JcaContentVerifierProviderBuilder().build(csr.getSubjectPublicKeyInfo()));
+            //if (isValid) {
+                // Ecriture du nouveau certificat dans un fichier .cer
+                writeCertToFileBase64Encoded(cert, commonName + ".cer");
+                // Export du nouveau certificat et de sa clef privée dans un keyStore qui lui est propre
+                exportKeyPairToKeystoreFile(issuedCertKeyPair, cert, TLSHackConstants.DEFAULT_ALIAS, commonName + ".pfx", TLSHackConstants.ROOTCAKSTYPE, TLSHackConstants.ROOTCAKSPASS);
+            //    System.err.println(TLSHackConstants.CERTSUCCESS);
+            //}
+            writeCertToPEM(cert, commonName+".pem");
 
         } catch (NoSuchAlgorithmException e) {
             System.err.println(TLSHackConstants.KEYGENERR);
@@ -193,5 +205,12 @@ public class CryptoX509 {
         certificateOut.write(Base64.encode(certificate.getEncoded()));
         certificateOut.write("-----END CERTIFICATE-----".getBytes());
         certificateOut.close();
+    }
+
+    private static void writeCertToPEM (X509Certificate certificate, String fileName) throws Exception{
+        try (BufferedWriter writer = Files.newBufferedWriter(Path.of(fileName), UTF_8);
+        PemWriter pemWriter = new PemWriter(writer)){
+            pemWriter.writeObject(new PemObject("CERTIFICATE", certificate.getEncoded()));
+        }
     }
 }
