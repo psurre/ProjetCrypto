@@ -13,6 +13,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
@@ -111,7 +112,7 @@ public class CryptoX509 {
             JcaContentSignerBuilder csrBuilder = new JcaContentSignerBuilder(TLSHackConstants.SIGNATURE_ALGORITHM).setProvider(TLSHackConstants.BC_PROVIDER);
             // Signer la nouvelle paire de clefs avec la clef privée de notre CA racine.
             PrivateKey rootPrivKey = getROOTCAPKey(TLSHackConstants.ROOTCAKSTYPE, TLSHackConstants.DEFAULT_ALIAS, TLSHackConstants.ROOTCAFILE, TLSHackConstants.ROOTCAKSPASS);
-            ContentSigner csrContentSigner = csrBuilder.build(rootPrivKey);
+            ContentSigner csrContentSigner = csrBuilder.build(issuedCertKeyPair.getPrivate());
             PKCS10CertificationRequest csr = p10Builder.build(csrContentSigner);
 
             // Use the Signed KeyPair and CSR to generate an issued Certificate
@@ -141,7 +142,8 @@ public class CryptoX509 {
             X509CertificateHolder issuedCertHolder = issuedCertBuilder.build(csrContentSigner);
             cert  = new JcaX509CertificateConverter().setProvider(TLSHackConstants.BC_PROVIDER).getCertificate(issuedCertHolder);
             // Verify the issued cert signature against the root (issuer) cert
-            cert.verify(rootCert.getPublicKey(), TLSHackConstants.BC_PROVIDER);
+            //cert.verify(rootCert.getPublicKey(), TLSHackConstants.BC_PROVIDER);
+            boolean isValid = csr.isSignatureValid(new JcaContentVerifierProviderBuilder().build(csr.getSubjectPublicKeyInfo()));
 
             // Ecriture du nouveau certificat dans un fichier .cer
             writeCertToFileBase64Encoded(cert, commonName+".cer");
