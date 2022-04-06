@@ -11,7 +11,6 @@ import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.util.Base64;
 
 /**
  * Création de sockets TLS.
@@ -48,7 +47,7 @@ public final class CryptoTLSSocketManager implements CryptoSocketManager
     {
         m_sslContext = SSLContext.getInstance(TLSHackConstants.TLSSTANDARD);
 
-        // Un seul algorithm PKIX
+        // Un seul algorithme PKIX
         final KeyManagerFactory keyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
 
