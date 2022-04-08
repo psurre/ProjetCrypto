@@ -4,8 +4,10 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-/* Classe mère du moteur proxy HTTPS
- * @author Team Crypto
+/**
+ * Classe mère du moteur proxy HTTPS
+ * @author Team Crypto M1
+ * @version 0.9
  */
 public abstract class CryptoWork implements Runnable {
 
@@ -51,12 +53,17 @@ public abstract class CryptoWork implements Runnable {
         return m_connectionDetails;
     }
 
-
-    /*
-     * Démarre une paire de threads qui :
-     * (1) Copient les données envoyées du client au serveur distant
-     * (2) Copier les données envoyées du serveur distant vers le client.
-     *
+    /**
+     * Fonctionne pour démarrer une paire de thread :
+     * 1 => Copie les données envoyées du client vers le serveur distant
+     * 2 => Copie les données envoyées par le serveur distant vers le client
+     * @param localSocket socket ouvert pour le client
+     * @param remoteSocket socket ouvert pour le serveur distant
+     * @param localInputStream flux de données en entrée
+     * @param localOutputStream flux de données en sortie
+     * @param remoteHost serveur distant
+     * @param remotePort port du serveur distant
+     * @throws IOException
      */
     protected final void launchThreadPair(Socket localSocket, Socket remoteSocket,
                                           InputStream localInputStream,

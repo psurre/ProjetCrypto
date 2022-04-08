@@ -4,21 +4,33 @@ import java.io.PrintWriter;
 
 /**
  * Classe principale du projet Crypto.
- *
- * @author Team Crypto
+ * VM Option pour debugger : -Djavax.net.debug=ssl:handshake
+ * @author Team Crypto M1
+ * @version 0.9
  */
 
 public class CryptoProxyServer
 {
+    /**
+     * Paramètre pour activer ou non l'affichage des logs et debugger le code
+     */
     public static boolean debugFlag = false;
 
+    /**
+     * Fonction principale de la classe
+     * @param args Arguments passés à la classe main
+     */
     public static void main(String[] args) {
         // Construction de l'objet proxy
         final CryptoProxyServer proxy = new CryptoProxyServer(args);
         // Démarrage effectif du proxy
         proxy.run();
     }
-
+    /**
+     * Affiche un message d'aide à l'utilisation de la classe main Java
+     * @return null
+     *
+     */
     private Error printUsage() {
         System.err.println(
                 "\n" +
@@ -32,7 +44,7 @@ public class CryptoProxyServer
                         "\n   [-keyStore <file>]           Key store details for" +
                         "\n   [-keyStorePassword <pass>]   certificates. Equivalent to" +
                         "\n   [-keyStoreType <type>]       javax.net.ssl.XXX properties" +
-                        "\n   [-keyStoreAlias <alias>]     Default is "+ TLSHackConstants.DEFAULT_ALIAS +
+                        "\n   [-keyStoreAlias <alias>]     Default is "+ TLSHackConstants.CERTALIAS +
                         "\n   [-outputFile <filename>]     Default is stdout" +
                         "\n   [-v ]                        Verbose proxy output" +
                         "\n   [-h ]                        Print this message" +
@@ -46,13 +58,25 @@ public class CryptoProxyServer
         return null;
     }
 
+    /**
+     * Fonction qui affiche un message d'erreur
+     * @param s Chaine de caractères à afficher
+     * @return Un message d'erreur
+     */
     private Error printUsage(String s) {
         System.err.println("\n" + "Error: " + s);
         throw printUsage();
     }
 
+    /**
+     * Variable en charge de démarrer l'engine global.
+     */
     private CryptoWork m_engine = null;
 
+    /**
+     * Constructeur de la classe
+     * @param args Liste d'arguments passés à la fonction
+     */
     private CryptoProxyServer (String[] args)
     {
         // Initialisation des variables
@@ -60,9 +84,8 @@ public class CryptoProxyServer
         CryptoFilter responseFilter = new CryptoFilter();
         int localPort = TLSHackConstants.LOCALPORT;
         String localHost = TLSHackConstants.LOCALHOST;
-
         int timeout = 0;
-        String filename = null;
+
         // Initialisation des variables en fonction des arguments passés au programme
         try {
             for (int i=0; i<args.length; i++)
@@ -105,14 +128,16 @@ public class CryptoProxyServer
         }
         // Affichage du message de démarrage du proxy
         final StringBuffer startMessage = new StringBuffer();
-
         startMessage.append(TLSHackConstants.PROXYSTART +
                 "\n   Local host:       " + localHost +
                 "\n   Local port:       " + localPort);
         startMessage.append("\n   "+TLSHackConstants.TLSSETUP);
-
         System.err.println(startMessage);
-        // Création de la rootCA
+
+        /**
+         *  Création de la rootCA
+         *  Si le fichier de la rootCA n'existe pas, on le crée.
+         */
         File f = new File(TLSHackConstants.ROOTCAFILE);
         if(!f.isFile())
         {
@@ -125,8 +150,11 @@ public class CryptoProxyServer
                 System.exit(2);
             }
         }
+        /**
+         * Phase importante !!
+         * Initialisation du m_engin avec le constructeur de la classe CryptoHTTPSWork qui hérite de CryptoWork
+         */
         try {
-            // Appel à la classe CryptoHTTPSWork pour créer le proxy
             m_engine =
                     new CryptoHTTPSWork(new CryptoHTTPSocketManager(),
                             new CryptoTLSSocketManager(),
@@ -145,6 +173,9 @@ public class CryptoProxyServer
         }
     }
 
+    /**
+     * Fonction de lancement du proxy HTTPS
+     */
     public void run()
     {
         m_engine.run();

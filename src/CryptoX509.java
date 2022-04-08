@@ -35,19 +35,21 @@ import java.util.Date;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * A utility class that provides a method for generating a signed
- * X.509 certificate from a given base certificate.  All fields of the
- * base certificate are preserved, except for the IssuerDN, the
- * public key, and the signature.
+ * Classe qui propose une fonction de création de la root CA et une fonction de génération de certificats dynamiques
+ *
+ * @author Team Crypto M1
+ * @version 0.9
  */
 public class CryptoX509 {
 
-    // Fonctionne de création du certificat de la root CA
-    public static X509Certificate
+    /**
+     * Fonction de création du certificat de la root CA
+     */
+    public static void
     generateRootCA(
 
     )throws Exception{
-        // Add the BouncyCastle Provider
+        // Le provider de sécurité retenu est BouncyCastle
         Security.addProvider(new BouncyCastleProvider());
 
         // Initialisation du générateur de clefs
@@ -65,14 +67,13 @@ public class CryptoX509 {
         KeyPair rootKeyPair = keyPairGenerator.generateKeyPair();
         BigInteger rootSerialNum = new BigInteger(Long.toString(new SecureRandom().nextLong()));
 
-        // Issued By and Issued To same for root certificate
+        // Le Subject et l'Issuer sont les même, c'est une root CA
         X500Name rootCertIssuer = new X500Name(TLSHackConstants.ROOTCACN);
-        X500Name rootCertSubject = rootCertIssuer;
         //Initialisation des constructeurs pour la signature de la CA
         //Paramètres : L'algorithme utilisé pour la signature, le provider et la clef privée root CA
         ContentSigner rootCertContentSigner = new JcaContentSignerBuilder(TLSHackConstants.SIGNATURE_ALGORITHM).setProvider(TLSHackConstants.BC_PROVIDER).build(rootKeyPair.getPrivate());
         //Paramètres : le certificat de l'issuer (le même), le numéro de série du certificat, la date de début, la date de fin, le subject (le même) et la clef publique root CA
-        X509v3CertificateBuilder rootCertBuilder = new JcaX509v3CertificateBuilder(rootCertIssuer, rootSerialNum, startDate, endDate, rootCertSubject, rootKeyPair.getPublic());
+        X509v3CertificateBuilder rootCertBuilder = new JcaX509v3CertificateBuilder(rootCertIssuer, rootSerialNum, startDate, endDate, rootCertIssuer, rootKeyPair.getPublic());
 
         // ************************
         // Extensions au certificat
@@ -96,14 +97,15 @@ public class CryptoX509 {
         // Ecriture du certificat généré dans un fichier .pem
         writeCertToPEM(rootCert, TLSHackConstants.ROOTCACERTPEM);
         // Export du certificat et de la clef privée dans un Key Store dédié
-        exportKeyPairToKeystoreFile(rootKeyPair, rootCert, TLSHackConstants.DEFAULT_ALIAS, TLSHackConstants.ROOTCAFILE, TLSHackConstants.ROOTCAKSTYPE, TLSHackConstants.ROOTCAKSPASS);
-
-        // ************************
-        // On retourne le certificat de la root CA
-        return rootCert;
+        exportKeyPairToKeystoreFile(rootKeyPair, rootCert, TLSHackConstants.ROOTALIAS, TLSHackConstants.ROOTCAFILE);
     }
 
-    // Fonction de création de certificat dynamique
+    /**
+     * Fonction de génération dynamique de certificats
+     * @param commonName Nom du site pour lequel on veut créer un certificat
+     * @param rootCert Certificat de la root CA
+     * @return un certificat de type <code>X509Certificate</code>
+     */
     public static X509Certificate
     generateBCCertificate(
             String commonName,
@@ -147,7 +149,6 @@ public class CryptoX509 {
             // Création du signataire de contenu avec la clef privée de la root CA
             // Paramètre : la clef privée de la root CA
             ContentSigner csrContentSigner = csrBuilder.build(rootPrivKey);
-            /* TODO à nettoyer : ContentSigner csrContentSigner = csrBuilder.build(issuedCertKeyPair.getPrivate());*/
             // Création de la requête de signature
             // Paramètre : le signataire de contenu
             PKCS10CertificationRequest csr = p10Builder.build(csrContentSigner);
@@ -167,14 +168,12 @@ public class CryptoX509 {
             // subjectKeyIdentifier => clef publique du subject du certificat à créer.
             issuedCertBuilder.addExtension(Extension.subjectKeyIdentifier, false, issuedCertExtUtils.createSubjectKeyIdentifier(issuedCertKeyPair.getPublic()));
 
-            // Add intended key usage extension if needed
-            //issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.keyEncipherment));
+            // Ajout du KeyUsage => Signature digitale
             issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.digitalSignature));
 
-            // Add DNS name is cert is to used for SSL
+            // Récupération et ajout d'autres noms DNS
             issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
                     new GeneralName(GeneralName.dNSName, commonName),
-                    //new GeneralName(GeneralName.iPAddress, "127.0.0.1")
             }));
 
             // ***************************
@@ -189,13 +188,10 @@ public class CryptoX509 {
             if (isValid) {
                 // Ecriture du nouveau certificat dans un fichier .pem
                 writeCertToPEM(cert, commonName+".pem");
-                //writeCertToFileBase64Encoded(cert, commonName + ".cer");
                 // Export du nouveau certificat et de sa clef privée dans un keyStore qui lui est propre
-                exportKeyPairToKeystoreFile(issuedCertKeyPair, cert, TLSHackConstants.DEFAULT_ALIAS, commonName + ".pfx", TLSHackConstants.ROOTCAKSTYPE, TLSHackConstants.ROOTCAKSPASS);
+                exportKeyPairToKeystoreFile(issuedCertKeyPair, cert, TLSHackConstants.CERTALIAS, commonName + ".pfx");
                 System.out.println(TLSHackConstants.CERTSUCCESS);
             }
-
-
         } catch (NoSuchAlgorithmException e) {
             System.err.println(TLSHackConstants.KEYGENERR);
             e.printStackTrace();
@@ -212,20 +208,31 @@ public class CryptoX509 {
         return cert;
     }
 
-    private static void exportKeyPairToKeystoreFile(KeyPair keyPair, X509Certificate certificate, String alias, String fileName, String storeType, String storePass) throws Exception {
-        KeyStore sslKeyStore = KeyStore.getInstance(storeType, TLSHackConstants.BC_PROVIDER);
+    /**
+     * Foncion pour exporter les clefs générées vers un Keystore
+     * @param keyPair Paire de clefs à sauvegarder
+     * @param certificate Certificat à sauvegarder
+     * @param alias Alias utilisé pour se retrouver dans les enregistrements de la Keystore
+     * @param fileName Nom du fichier Keystore
+     */
+    private static void exportKeyPairToKeystoreFile(KeyPair keyPair, X509Certificate certificate, String alias, String fileName) throws Exception {
+        KeyStore sslKeyStore = KeyStore.getInstance(TLSHackConstants.ROOTCAKSTYPE, TLSHackConstants.BC_PROVIDER);
         sslKeyStore.load(null, null);
         // Récupération du mot de passe
-        byte[] passTmp = java.util.Base64.getDecoder().decode(storePass);
+        byte[] passTmp = java.util.Base64.getDecoder().decode(TLSHackConstants.ROOTCAKSPASS);
         String pass = new String (passTmp);
         sslKeyStore.setKeyEntry(alias, keyPair.getPrivate(), pass.toCharArray(),new X509Certificate[]{certificate});
         FileOutputStream keyStoreOs = new FileOutputStream(fileName);
         sslKeyStore.store(keyStoreOs, pass.toCharArray());
     }
 
+    /**
+     * Fonction pour récupérer la clef privée de la root CA (depuis le fichier Keystore)
+     * @return Une clef privée
+     */
     private static PrivateKey getROOTCAPKey() throws Exception{
         String storeType = TLSHackConstants.ROOTCAKSTYPE;
-        String alias = TLSHackConstants.DEFAULT_ALIAS;
+        String alias = TLSHackConstants.ROOTALIAS;
         String fileName = TLSHackConstants.ROOTCAFILE;
         String storePass = TLSHackConstants.ROOTCAKSPASS;
         KeyStore sslKeyStore = KeyStore.getInstance(storeType, TLSHackConstants.BC_PROVIDER);
@@ -233,10 +240,15 @@ public class CryptoX509 {
         byte[] passTmp = java.util.Base64.getDecoder().decode(storePass);
         String pass = new String (passTmp);
         sslKeyStore.load(fileKS, pass.toCharArray());
-        PrivateKey rootCAKey = (PrivateKey)sslKeyStore.getKey(alias, pass.toCharArray());
-        return rootCAKey;
+        return (PrivateKey)sslKeyStore.getKey(alias, pass.toCharArray());
     }
 
+    /**
+     * Fonction pour écrire un certificat dans un fichier en utilisant un encodage en Base64.
+     * Gardée pour un éventuel usage extérieur
+     * @param certificate Le certificat X509 à persister
+     * @param fileName Nom du fichier en sortie
+     */
     private static void writeCertToFileBase64Encoded(X509Certificate certificate, String fileName) throws Exception {
         FileOutputStream certificateOut = new FileOutputStream(fileName);
         certificateOut.write("-----BEGIN CERTIFICATE-----".getBytes());
@@ -245,6 +257,11 @@ public class CryptoX509 {
         certificateOut.close();
     }
 
+    /**
+     * Fonction pour écrire un certificat X509 dans un fichier au format .pem
+     * @param certificate Le certificat X509 à persister
+     * @param fileName Nom du fichier en sortie
+     */
     private static void writeCertToPEM (X509Certificate certificate, String fileName) throws Exception{
         try (BufferedWriter writer = Files.newBufferedWriter(Path.of(fileName), UTF_8);
         PemWriter pemWriter = new PemWriter(writer)){

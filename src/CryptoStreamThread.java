@@ -5,14 +5,15 @@ import java.net.SocketException;
 
 /**
  * Copie les octets d'un InputStream vers un OutputStream.  Utilise un
- * ProxyDataFilter pour enregistrer le contenu de manière appropriée.
- *
+ * <code>ProxyDataFilter</code> pour enregistrer le contenu de manière appropriée.
+ * @author Team Crypto M1
+ * @version 0.9
  */
 public class CryptoStreamThread implements Runnable
 {
     // Pour des raisons de simplicité, les filtres adoptent une approche orientée tampon.
     // Cela signifie qu'ils s'arrêtent tous aux limites du tampon. Notre tampon
-    // est énorme, donc nous ne devrions pas poser de problème, mais le réseau peut le faire en nous envoyant des fragments de messages.
+    // est énorme, donc nous ne devrions pas avoir de problèmes.
 
     private final CryptoConnDet m_connectionDetails;
     private final InputStream m_in;
@@ -20,6 +21,14 @@ public class CryptoStreamThread implements Runnable
     private final CryptoFilter m_filter;
     private final PrintWriter m_outputWriter;
 
+    /**
+     * Constructeur de classe
+     * @param connectionDetails Détails d'une connexion
+     * @param in Flux d'entrée
+     * @param out Flux de sortie
+     * @param filter Filtre de sortie pour afficher des informations
+     * @param outputWriter Objet de type <code>PrintWriter</code>
+     */
     public CryptoStreamThread(CryptoConnDet connectionDetails,
                         InputStream in, OutputStream out,
                         CryptoFilter filter,
@@ -44,7 +53,9 @@ public class CryptoStreamThread implements Runnable
 
         t.start();
     }
-
+    /**
+     * Fonction qui démarre avec la classe
+     */
     public void run() {
         try {
             byte[] buffer = new byte[TLSHackConstants.BUFFERSIZE];
@@ -56,10 +67,8 @@ public class CryptoStreamThread implements Runnable
                     break;
                 }
 
-
                 final byte[] newBytes =
                         m_filter.handle(m_connectionDetails, buffer, bytesRead);
-
                 m_outputWriter.flush();
 
                 if (newBytes != null) {
@@ -69,7 +78,7 @@ public class CryptoStreamThread implements Runnable
                 }
             }
         } catch (SocketException e) {
-            // On ne renvoie pas d'erreur sur les erreurs de Socket
+            e.printStackTrace(System.err);
         } catch (Exception e) {
             e.printStackTrace(System.err);
         }
@@ -82,15 +91,16 @@ public class CryptoStreamThread implements Runnable
 
         m_outputWriter.flush();
 
-        // Fin lorsque le stream d'entrée est clos.
         try {
             m_out.close();
         } catch (Exception e) {
+            e.printStackTrace(System.err);
         }
 
         try {
             m_in.close();
         } catch (Exception e) {
+            e.printStackTrace(System.err);
         }
     }
 }

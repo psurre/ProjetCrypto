@@ -3,22 +3,30 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * Runnable that actively copies from an InputStream to
- * an OutputStream.
- *
+ * Classe de type <code>Runnable</code> qui copie depuis un flux d'entrée vers un flux de sortie
+ * @author Team Crypto M1
+ * @version 0.9
  */
 public class CryptoStreamCopy implements Runnable
 {
     private final InputStream m_in;
     private final OutputStream m_out;
 
+    /**
+     * Initialisation des flux d'entrée et de sortie
+     * @param in Flux d'entrée
+     * @param out Flux de sortie
+     */
     public CryptoStreamCopy(InputStream in, OutputStream out) {
         m_in = in;
         m_out = out;
     }
 
+    /**
+     * Fonction qui démarre avec la classe
+     */
     public void run() {
-        final byte[] buffer = new byte[4096];
+        final byte[] buffer = new byte[TLSHackConstants.BUFFERCON];
 
         try {
             short idle = 0;
@@ -42,22 +50,21 @@ public class CryptoStreamCopy implements Runnable
                 }
             }
         } catch (IOException e) {
-            // Be silent about IOExceptions ...
+            e.printStackTrace(System.err);
         } catch (InterruptedException e) {
-            // ... and InterruptedExceptions.
+            e.printStackTrace(System.err);
         }
 
-        // We're exiting, usually because the in stream has been
-        // closed. Whatever, close our streams. This will cause the
-        // paired thread to exit too.
         try {
             m_out.close();
         } catch (IOException e) {
+            e.printStackTrace(System.err);
         }
 
         try {
             m_in.close();
         } catch (IOException e) {
+            e.printStackTrace(System.err);
         }
     }
 }

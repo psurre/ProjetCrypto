@@ -1,35 +1,35 @@
-import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
-import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.*;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 
 /**
- * Utility methods for creating a new signed certificate.
+ * Classe permettant de demander la création et la signature des certificats générés dynamiquement.
  *
- * @author Srinivas Inguva
- * @author Liz Stinson
- * @author Priyank Patel
+ * @author Team Crypto M1
+ * @version 0.9
  */
 
 public class CryptoSignCert {
+    /**
+     * Fonction pour charger les informations d'un KeyStore
+     * @param ksFile Fichier KeyStore à charger
+     * @param ksPass Mot de passe pour accéder au fichier KeyStore
+     * @return Un objet de type <code>KeyStore</code>
+     */
     private static KeyStore load(String ksFile, String ksPass) {
         KeyStore tmp = null;
         try {
-            tmp = KeyStore.getInstance("jks");
+            tmp = KeyStore.getInstance(TLSHackConstants.ROOTCAKSTYPE);
             tmp.load(new FileInputStream(ksFile),ksPass.toCharArray());
         } catch (IOException ioe) {
             ioe.printStackTrace();
             return null;
         } catch (KeyStoreException kse) {
-            System.err.println("Error while parsing keystore");
+            System.err.println(TLSHackConstants.KSOPENERR+ksFile);
             kse.printStackTrace();
             return null;
         } catch (Exception e) {
@@ -40,32 +40,36 @@ public class CryptoSignCert {
     }
 
     /**
-     * Forge certificate which is identical to the given base certificate, except is signed
-     * by the "CA" certificate in caKS, and has the associated IssuerDN.
-     *
-     * The new cert will be signed by a the CA whose public/private keys are contained
-     * in the caKS KeyStore (under the alias caAlias).
-     *
+     * Fonction permettant de créer un certificat identique au certificat de base fournit en paramètre, à la
+     * seule exception qu'il est signé par notre root CA et que l'Issuer est notre root CA.
+     * @param caKS Keystore de la root CA utilisée pour signer le certificat
+     * @param caKSPass Mot de passe pour accéder au Keystore de la root CA
+     * @param caAlias Alias permettant de récupérer les clefs de la root CA
+     * @param commonName Nom du serveur distant pour lequel on génère un nouveau certificat
+     * @return Un certificat de type <code>X509Certificate</code>
+     * @throws Exception
      */
-
     public static X509Certificate forgeCert(KeyStore caKS, char[] caKSPass, String caAlias,
-                                            String commonName, X509Certificate baseCert)
+                                            String commonName)
             throws Exception
     {
-        //java.security.Security.addProvider(new iaik.security.provider.IAIK());
+        // Le provider de sécurité retenu est BouncyCastle
         java.security.Security.addProvider(new BouncyCastleProvider());
-
-        //CertificateFactory cf = CertificateFactory.getInstance("X.509","BC");
-
+        // Récupération de la clé  privée de la root CA
+        // La clef est passée en clair dans la variable caKSPass
         PrivateKey pk = (PrivateKey) caKS.getKey(caAlias,caKSPass);
+
         if (pk == null) {
             System.out.println(TLSHackConstants.PKERROR);
         } else {
             if (CryptoProxyServer.debugFlag)
                 System.out.println(TLSHackConstants.PKFORMAT+pk.getFormat());
         }
+        // Récupération du certificat de la root CA
         X509Certificate rootCert = (X509Certificate) caKS.getCertificate(caAlias);
+
         // Appel à la fonction de génération du certificat
+        // Classe CryptoX509
         X509Certificate x509 = CryptoX509.generateBCCertificate(commonName, rootCert);
         if (CryptoProxyServer.debugFlag) {
             System.out.println(TLSHackConstants.NEWCERT);
@@ -74,24 +78,4 @@ public class CryptoSignCert {
 
         return x509;
     }
-
-    /* Self test */
-    public static void main(String[] args) throws Exception {
-        String caKeystore = args[0];
-        String caKSPass = args[1];
-        String caAlias = args[2];
-        String commonName = args[3];
-
-        KeyStore caKS = load(caKeystore,caKSPass);
-        PrivateKey pk = (PrivateKey) caKS.getKey(caAlias,caKSPass.toCharArray());
-
-        X509Certificate newCert = forgeCert(caKS, caKSPass.toCharArray(), caAlias, commonName, null);
-
-        KeyStore newKS = KeyStore.getInstance("jks");
-        newKS.load(null, null);
-
-        newKS.setKeyEntry("myKey", pk, caKSPass.toCharArray(), new Certificate[] {newCert});
-        newKS.store(new FileOutputStream("newkeystore"),caKSPass.toCharArray());
-    }
-
 }
