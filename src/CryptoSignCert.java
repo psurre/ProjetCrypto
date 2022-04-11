@@ -1,9 +1,7 @@
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.*;
-import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
 /**

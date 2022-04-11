@@ -160,9 +160,7 @@ public final class CryptoTLSSocketManager implements CryptoSocketManager
     }
 
     /**
-     * We're carrying out a MITM attack, we don't care whether the cert
-     * chains are trusted or not ;-)
-     *
+     * On réalise une interception TLS, donc on ne vérifie pas forcément la chaine de certification.
      */
     private static class TrustEveryone implements X509TrustManager
     {

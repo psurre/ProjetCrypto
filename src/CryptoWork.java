@@ -55,8 +55,8 @@ public abstract class CryptoWork implements Runnable {
 
     /**
      * Fonctionne pour démarrer une paire de thread :
-     * 1 => Copie les données envoyées du client vers le serveur distant
-     * 2 => Copie les données envoyées par le serveur distant vers le client
+     * 1) Copie les données envoyées du client vers le serveur distant
+     * 2) Copie les données envoyées par le serveur distant vers le client
      * @param localSocket socket ouvert pour le client
      * @param remoteSocket socket ouvert pour le serveur distant
      * @param localInputStream flux de données en entrée
