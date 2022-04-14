@@ -1,18 +1,14 @@
-## Getting Started
+## Projet Crypto M1
 
-Welcome to the VS Code Java world. Here is a guideline to help you get started to write Java code in Visual Studio Code.
+Bienvenue sur le Git du projet de crypto M1.
+Le sujet est de pouvoir créer un intercepteur TLS en Java.
 
-## Folder Structure
+## Structure du Git
 
-The workspace contains two folders by default, where:
+Les répertoires d'importance sont les suivants:
 
-- `src`: the folder to maintain sources
-- `lib`: the folder to maintain dependencies
+- `src`: le répertoire du code source Java
+- `lib`: le répertoire des librairies utilisées (BouncyCastle)
 
-Meanwhile, the compiled output files will be generated in the `bin` folder by default.
-
-> If you want to customize the folder structure, open `.vscode/settings.json` and update the related settings there.
-
-## Dependency Management
-
-The `JAVA PROJECTS` view allows you to manage your dependencies. More details can be found [here](https://github.com/microsoft/vscode-java-dependency#manage-dependencies).
+Pour faire fonctionner le projet, il est conseillé de le cloner et de l'éditer avec IntelliJ.
+Le script run.sh permet également d'exécuter le projet.
