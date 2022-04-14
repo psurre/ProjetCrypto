@@ -32,7 +32,6 @@ public interface TLSHackConstants {
     String ROOTCAFILE = LOCALHOST+".pfx";
     String ROOTCACERTPEM = LOCALHOST+".pem";
     String ROOTCAKSPASS = "bW90MnBAc3NlSkFWQQ==";
-    String ROOTCAERR = "[CryptoProxyServer] Erreur à la création de la Root CA !!";
 
     // Constantes Log
     String PROXYSTART = "************* Démarrage du serveur Proxy ***************";
@@ -57,4 +56,7 @@ public interface TLSHackConstants {
     String PROXFAILEDTO = "Impossible de trouver la destination pour le message: ";
     String MSG501 = "501 non implémenté";
     String KSOPENERR = "Erreur à l'ouverture du KeyStore : ";
+    String TIMEOUTERR = "La valeur de timeout ne peut pas être négative";
+    String PROXYSTOP = "Proxy stoppé !";
+    String ROOTCAERR = "[CryptoProxyServer] Erreur à la création de la Root CA !!";
 }

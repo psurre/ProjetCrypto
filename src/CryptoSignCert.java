@@ -38,8 +38,7 @@ public class CryptoSignCert {
     }
 
     /**
-     * Fonction permettant de créer un certificat identique au certificat de base fournit en paramètre, à la
-     * seule exception qu'il est signé par notre root CA et que l'Issuer est notre root CA.
+     * Fonction permettant de créer un certificat signé par notre root CA, l'Issuer etant aussi notre root CA.
      * @param caKS Keystore de la root CA utilisée pour signer le certificat
      * @param caKSPass Mot de passe pour accéder au Keystore de la root CA
      * @param caAlias Alias permettant de récupérer les clefs de la root CA

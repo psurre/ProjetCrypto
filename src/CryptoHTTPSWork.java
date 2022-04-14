@@ -22,12 +22,6 @@ import org.bouncycastle.asn1.x500.X500Name;
  * Cela initie la file d'attente du client pour envoyer des données TLS au proxy.
  * Le proxy se contente de les transmettre au serveur identifié par le message CONNECT.
  *
- * L'API Java présente un défi particulier : elle permet aux sockets
- * d'être soit SSL soit non SSL, mais ne leur permet pas de changer leur
- * type en cours de route.Pour contourner ce problème, nous acceptons le CONNECT puis aveuglément
- * le reste du flux à travers une classe spéciale ProxyEngine (ProxySSLEngine) qui est instanciée pour
- * TLS.
- *
  * @author Team Crypto M1
  * @version 0.9
  */
@@ -303,7 +297,7 @@ public class CryptoHTTPSWork extends CryptoWork
         }
 
         /**
-         * Fonction exécutée par la classe CryptoHTTPSWork
+         * Fonction exécutée par la classe ProxyTLSEngine
          */
         public void run()
         {

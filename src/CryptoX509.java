@@ -169,7 +169,7 @@ public class CryptoX509 {
             issuedCertBuilder.addExtension(Extension.subjectKeyIdentifier, false, issuedCertExtUtils.createSubjectKeyIdentifier(issuedCertKeyPair.getPublic()));
 
             // Ajout du KeyUsage => Signature digitale
-            issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.digitalSignature));
+            issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.digitalSignature| KeyUsage.keyEncipherment));
 
             // Récupération et ajout d'autres noms DNS
             issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {

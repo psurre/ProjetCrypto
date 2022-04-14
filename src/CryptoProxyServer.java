@@ -37,20 +37,17 @@ public class CryptoProxyServer
                         "Usage: " +
                         "\n java CryptoProxyServer <options>" +
                         "\n" +
-                        "\n Where options can include:" +
+                        "\n Options peut prendre une ou plusieurs de ces valeurs:" +
                         "\n" +
-                        "\n   [-localHost <host name/ip>]  Default is "+TLSHackConstants.LOCALHOST +
-                        "\n   [-localPort <port>]          Default is "+ TLSHackConstants.LOCALPORT +
-                        "\n   [-keyStore <file>]           Key store details for" +
-                        "\n   [-keyStorePassword <pass>]   certificates. Equivalent to" +
-                        "\n   [-keyStoreType <type>]       javax.net.ssl.XXX properties" +
-                        "\n   [-keyStoreAlias <alias>]     Default is "+ TLSHackConstants.CERTALIAS +
-                        "\n   [-outputFile <filename>]     Default is stdout" +
-                        "\n   [-v ]                        Verbose proxy output" +
-                        "\n   [-h ]                        Print this message" +
-                        "\n" +
-                        "\n -outputFile specifies where the output from ProxyDataFilter will go." +
-                        "\n By default, it is sent to stdout" +
+                        "\n   [-localHost <host name/ip>]  Par défaut "+TLSHackConstants.LOCALHOST +
+                        "\n   [-localPort <port>]          Par défaut "+ TLSHackConstants.LOCALPORT +
+                        "\n   [-keyStore <file>]           Utiliser un KeyStore particulier autre que celui par défaut" +
+                        "\n   [-keyStorePassword <pass>]   Le mot de passe du KeyStore particulier" +
+                        "\n   [-keyStoreType <type>]       Utiliser un type de KeyStore autre que " + TLSHackConstants.ROOTCAKSTYPE +
+                        "\n   [-keyStoreAlias <alias>]     Par défaut "+ TLSHackConstants.CERTALIAS +
+                        "\n   [-outputFile <filename>]     Ecrire dans un fichier les différentes connexions réalisées au travers du proxy " +
+                        "\n   [-v ]                        Activation du mode verbeux" +
+                        "\n   [-h ]                        Ce message d'aide" +
                         "\n"
         );
 
@@ -124,7 +121,7 @@ public class CryptoProxyServer
         }
         // Contrôle sur la valeur de timeout
         if (timeout < 0) {
-            throw printUsage("Timeout must be non-negative");
+            throw printUsage(TLSHackConstants.TIMEOUTERR);
         }
         // Affichage du message de démarrage du proxy
         final StringBuffer startMessage = new StringBuffer();
@@ -152,7 +149,7 @@ public class CryptoProxyServer
         }
         /**
          * Phase importante !!
-         * Initialisation du m_engin avec le constructeur de la classe CryptoHTTPSWork qui hérite de CryptoWork
+         * Initialisation du m_engine avec le constructeur de la classe CryptoHTTPSWork qui hérite de CryptoWork
          */
         try {
             m_engine =
@@ -179,7 +176,7 @@ public class CryptoProxyServer
     public void run()
     {
         m_engine.run();
-        System.err.println("Engine exited");
+        System.err.println(TLSHackConstants.PROXYSTOP);
         System.exit(0);
     }
 }

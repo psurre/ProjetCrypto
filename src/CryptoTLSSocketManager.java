@@ -24,23 +24,9 @@ public final class CryptoTLSSocketManager implements CryptoSocketManager
 
     public KeyStore ks = null;
 
-    /*
-     *
-     * We can't install our own TrustManagerFactory without messing
-     * with the security properties file. Hence we create our own
-     * SSLContext and initialise it. Passing null as the keystore
-     * parameter to SSLContext.init() results in a empty keystore
-     * being used, as does passing the key manager array obtain from
-     * keyManagerFactory.getInstance().getKeyManagers(). To pick up
-     * the "default" keystore system properties, we have to read them
-     * explicitly. UGLY, but necessary so we understand the expected
-     * properties.
-     *
-     */
-
     /**
-     * This constructor will create an SSL server socket factory
-     * that is initialized with a fixed CA certificate
+     * Création d'un ServerSocketFactory
+     * initilisé avec le certificat de la root CA
      */
     public CryptoTLSSocketManager()
             throws IOException, GeneralSecurityException
@@ -80,9 +66,8 @@ public final class CryptoTLSSocketManager implements CryptoSocketManager
     }
 
     /**
-     * This constructor will create an SSL server socket factory
-     * that is initialized with a forged server certificate
-     * that is issued by the proxy "CA certificate".
+     * Création d'un ServerSocketFactory
+     * initialisé avec le certificate généré dynamique signé par la root CA
      */
     public CryptoTLSSocketManager(String remoteCN, X509Certificate remoteServerCert)
             throws Exception
@@ -97,7 +82,6 @@ public final class CryptoTLSSocketManager implements CryptoSocketManager
                 System.getProperty(TLSHackConstants.KEYSTORELIB, TLSHackConstants.ROOTCAFILE);
         char[] keyStorePassword =
                 System.getProperty(TLSHackConstants.KEYSTOREPASSLIB, TLSHackConstants.ROOTCAKSPASS).toCharArray();
-        //KeyStore Decode
         byte[] passTmp = java.util.Base64.getDecoder().decode(String.valueOf(keyStorePassword));
         keyStorePassword = new String (passTmp).toCharArray();
 
@@ -160,7 +144,9 @@ public final class CryptoTLSSocketManager implements CryptoSocketManager
     }
 
     /**
+     * Partie qui est peut-être problématique.
      * On réalise une interception TLS, donc on ne vérifie pas forcément la chaine de certification.
+     * A investiguer avec plus de temps !
      */
     private static class TrustEveryone implements X509TrustManager
     {
