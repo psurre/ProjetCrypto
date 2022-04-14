@@ -1,2 +1,2 @@
 #!/bin/bash
-java -Dfile.encoding=UTF-8 -cp /home/psurre/Documents/Cryptographie/M1/Java/projetcrypto/lib/* /home/psurre/Documents/Cryptographie/M1/Java/projetcrypto/out/production/projetcrypto/CryptoProxyServer -localHost localhost -localPort 8888 -outputFile output.txt -v
+java -Dfile.encoding=UTF-8 -cp /home/psurre/Documents/Cryptographie/M1/Java/projetcrypto/out/production/projetcrypto:/home/psurre/Documents/Cryptographie/M1/Java/projetcrypto/lib CryptoProxyServer -localHost localhost -localPort 8888 -outputFile output.txt -v
